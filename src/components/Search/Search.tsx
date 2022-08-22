@@ -6,10 +6,13 @@ import { ISearchOption } from "../../interfaces";
 import CircularProgress from "@mui/material/CircularProgress/CircularProgress";
 /* Tools */
 import _ from "lodash";
+import { Typography } from "@mui/material";
 
-interface ISearchProps {}
+interface ISearchProps {
+  handleBuildingData: (building: any) => void;
+}
 
-const Search = () => {
+const Search = ({ handleBuildingData }: ISearchProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [searchString, setSearchString] = useState<string>("");
   const [options, setOptions] = useState<ISearchOption[]>([]);
@@ -17,7 +20,7 @@ const Search = () => {
 
   useEffect(() => {
     if (!searchString) {
-      setOptions([]);
+      // setOptions([]);
       return;
     }
     filteringFunctions(searchString);
@@ -29,8 +32,9 @@ const Search = () => {
 
       const bySearch = await search(searchString);
 
-      /* setFetched(bySearch);
-      setLoadingFilterResults(false); */
+      setOptions(bySearch);
+
+      /* setLoadingFilterResults(false); */
     }, 500),
     []
   );
@@ -44,7 +48,6 @@ const Search = () => {
         {
           method: "PUT",
           mode: "cors",
-          // credentials: 'include',
           headers: {
             "Content-Type": "application/json",
             "X-Api-Key": "026fe368-64ce-4a2b-8ed5-6d10fbfc9cc8",
@@ -63,8 +66,46 @@ const Search = () => {
       }
       const res = await response.json();
       console.log("search res:", res);
+      return res;
     } catch (error: any) {
       alert(error.message);
+      return [];
+    }
+  };
+
+  const handleOptionSelected = async (option: ISearchOption) => {
+    console.log("handleOptionSelected", option);
+
+    const egId = option.egid;
+    if (!egId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://microservices-api.immoledo.app/geo-prod/Geo/Buildings/ByEgid/${egId}`,
+        {
+          method: "GET",
+          mode: "cors",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Api-Key": "026fe368-64ce-4a2b-8ed5-6d10fbfc9cc8",
+            Accept: "*/*",
+          },
+        }
+      );
+      if (!response.ok) {
+        const message = `Kod greške: ${response.status}`;
+        throw new Error(message);
+      }
+      const res = await response.json();
+      console.log("building res:", res);
+      if (!res || !res.id) throw new Error("Error fetching building");
+      handleBuildingData(res);
+      return res;
+    } catch (error: any) {
+      alert(error.message);
+      return [];
     }
   };
 
@@ -82,11 +123,32 @@ const Search = () => {
         onClose={() => {
           setOpen(false);
         }}
+        clearOnBlur={false}
+        onChange={(event, value) => {
+          if (value && typeof value === "object") {
+            handleOptionSelected(value);
+          }
+        }}
+        freeSolo
+        getOptionLabel={(option) => {
+          if (typeof option === "string") return option;
+
+          return (
+            new DOMParser().parseFromString(option.highlight, "text/html")
+              .documentElement.textContent || ""
+          );
+        }}
+        /* renderOption={(props, option) => (
+          <Typography>
+            {new DOMParser().parseFromString(option.highlight, "text/html")
+              .documentElement.textContent || ""}
+          </Typography>
+        )} */
         loading={optionsLoading}
-        /* isOptionEqualToValue={(option, value) => option.title === value.title}
-          getOptionLabel={(option) => option.title} */
-        /* filterOptions={(x) => x} */
+        isOptionEqualToValue={(option, value) => option.egid === value.egid}
+        filterOptions={(x) => x}
         onInputChange={(event, newInputValue) => {
+          // if (event.type === "blur" || event.type === "click") return;
           setSearchString(newInputValue);
         }}
         renderInput={(params) => (

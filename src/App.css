@@ -3,9 +3,45 @@
 }
 
 .searchContainer {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  /* width: 100vw; */
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  margin-top: 50px;
+  z-index: 100;
+  background: white;
+}
+
+.marker {
+  background-image: url("/public/mapbox-icon.png");
+  background-size: cover;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.popup {
+  z-index: 100;
+}
+
+.popupContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.popupContentSideBySide {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popupContentSideBySide > span:first-of-type {
+  font-weight: bold;
+  margin-right: 5px;
 }
