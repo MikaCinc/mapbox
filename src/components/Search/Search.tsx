@@ -6,7 +6,6 @@ import { ISearchOption } from "../../interfaces";
 import CircularProgress from "@mui/material/CircularProgress/CircularProgress";
 /* Tools */
 import _ from "lodash";
-import { Typography } from "@mui/material";
 
 interface ISearchProps {
   handleBuildingData: (building: any) => void;
@@ -16,32 +15,28 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
   const [open, setOpen] = useState<boolean>(false);
   const [searchString, setSearchString] = useState<string>("");
   const [options, setOptions] = useState<ISearchOption[]>([]);
-  const optionsLoading = open && options.length === 0;
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!searchString) {
-      // setOptions([]);
+    if (!searchString || searchString.length < 3) {
+      setOptions([]);
       return;
     }
+    setLoading(true);
     filteringFunctions(searchString);
   }, [searchString]);
 
   const filteringFunctions = useCallback(
     _.debounce(async (searchString) => {
-      console.log("inside debouncerrrrr");
-
       const bySearch = await search(searchString);
 
       setOptions(bySearch);
-
-      /* setLoadingFilterResults(false); */
+      setLoading(false);
     }, 500),
     []
   );
 
   const search = async (label: string = "Sonnrain 4") => {
-    console.log("search", label);
-
     try {
       const response = await fetch(
         "https://microservices-api.immoledo.app/geo-prod/Geo/Query",
@@ -61,11 +56,10 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
         }
       );
       if (!response.ok) {
-        const message = `Kod greške: ${response.status}`;
+        const message = `Error code: ${response.status}`;
         throw new Error(message);
       }
       const res = await response.json();
-      console.log("search res:", res);
       return res;
     } catch (error: any) {
       alert(error.message);
@@ -74,13 +68,12 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
   };
 
   const handleOptionSelected = async (option: ISearchOption) => {
-    console.log("handleOptionSelected", option);
-
     const egId = option.egid;
     if (!egId) {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch(
         `https://microservices-api.immoledo.app/geo-prod/Geo/Buildings/ByEgid/${egId}`,
@@ -95,17 +88,18 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
         }
       );
       if (!response.ok) {
-        const message = `Kod greške: ${response.status}`;
+        const message = `Error code: ${response.status}`;
         throw new Error(message);
       }
       const res = await response.json();
-      console.log("building res:", res);
       if (!res || !res.id) throw new Error("Error fetching building");
       handleBuildingData(res);
       return res;
     } catch (error: any) {
       alert(error.message);
       return [];
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,11 +138,11 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
               .documentElement.textContent || ""}
           </Typography>
         )} */
-        loading={optionsLoading}
+        loading={loading}
         isOptionEqualToValue={(option, value) => option.egid === value.egid}
         filterOptions={(x) => x}
         onInputChange={(event, newInputValue) => {
-          // if (event.type === "blur" || event.type === "click") return;
+          if (event.type === "blur" || event.type === "click") return;
           setSearchString(newInputValue);
         }}
         renderInput={(params) => (
@@ -159,7 +153,7 @@ const Search = ({ handleBuildingData }: ISearchProps) => {
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {optionsLoading ? (
+                  {loading ? (
                     <CircularProgress color="inherit" size={20} />
                   ) : null}
                   {params.InputProps.endAdornment}

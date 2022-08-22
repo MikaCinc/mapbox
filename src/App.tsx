@@ -1,18 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 /* Styles */
 import "./App.css";
 /* Components */
 import { Search } from "./components";
-import { ISearchOption } from "./interfaces";
 /* Tools */
-import Map, { Layer, Marker, Popup, Source } from "react-map-gl";
+import Map, { Layer, MapRef, Marker, Popup, Source } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const defaultPolygon = {
   type: "Feature" as const,
   geometry: {
     type: "Polygon" as const,
-    // These coordinates outline Maine.
     coordinates: [
       [
         [-67.13734, 45.13745],
@@ -41,24 +39,33 @@ const defaultPolygon = {
   properties: {},
 };
 
-/* const fillLayer = {
+const fillLayer = {
   id: "mainPolygon",
-  type: "fill",
+  type: "fill" as const,
   source: "mainPolygon", // reference the data source
   layout: {},
   paint: {
     "fill-color": "#0080ff", // blue color fill
     "fill-opacity": 0.5,
   },
-}; */
+};
 
 function App() {
+  const [viewState, setViewState] = React.useState({
+    longitude: 8.2275,
+    latitude: 46.8182,
+    zoom: 8,
+  });
   const [selectedBuilding, setSelectedBuilding] = useState<any>();
   const [showPopup, setShowPopup] = useState(false);
+  const mapRef = useRef<MapRef>(null);
 
   const handleBuildingData = (building: any) => {
-    console.log("handleBuildingData", building);
     setSelectedBuilding(building);
+
+    const { longitude, latitude } = building.coordinates;
+
+    mapRef.current?.flyTo({ center: [longitude, latitude], duration: 2000 });
   };
 
   const getGeomData = () => {
@@ -75,8 +82,6 @@ function App() {
       c.latitude,
     ]);
 
-    console.log(coordinatesAdapted);
-
     return {
       type: "Feature" as const,
       geometry: {
@@ -91,6 +96,9 @@ function App() {
     <div className="App">
       <Search handleBuildingData={handleBuildingData} />
       <Map
+        {...viewState}
+        ref={mapRef}
+        onMove={(evt) => setViewState(evt.viewState)}
         initialViewState={{
           longitude: 8.2275,
           latitude: 46.8182,
@@ -111,13 +119,7 @@ function App() {
               <img className="marker" src="/mapbox-icon.png" />
             </Marker>
             <Source id="mainPolygon" type="geojson" data={getGeomData()}>
-              <Layer
-                paint={{
-                  "fill-color": "#0080ff", // blue color fill
-                  "fill-opacity": 0.5,
-                }}
-                type="fill"
-              />
+              <Layer {...fillLayer} />
             </Source>
           </>
         )}
@@ -127,7 +129,6 @@ function App() {
             latitude={selectedBuilding.coordinates.latitude}
             anchor="bottom"
             onClose={() => setShowPopup(false)}
-            onOpen={() => console.log("onOpen")}
             className="popup"
             closeOnClick={false}
           >
